@@ -19,36 +19,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Install Python 3.12
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Python environment
         shell: powershell
         run: |
-          choco install python --version=3.12.0 -y
-          $env:Path = "C:\Python312;C:\Python312\Scripts;" + $env:Path
-          $pyDir = "C:\Python312"
-          $pyExe = Join-Path $pyDir "python.exe"
-          $py3Exe = Join-Path $pyDir "python3.exe"
-          if (Test-Path $pyExe -PathType Leaf) {
-            if (-not (Test-Path $py3Exe -PathType Leaf)) {
-              New-Item -ItemType SymbolicLink -Path $py3Exe -Target $pyExe -Force | Out-Null
-            }
-          }
-
-      - name: Create venv for PyTorch build
-        shell: powershell
-        run: |
-          cd C:\
-          C:\Python312\python.exe -m venv pytorch_venv
-          . C:\pytorch_venv\Scripts\Activate.ps1
           python -m pip install --upgrade pip
           pip install packaging
 
       - name: Download and install AMD ROCm SDK wheels
         shell: powershell
         run: |
-          . C:\pytorch_venv\Scripts\Activate.ps1
-
           $version = "${{ github.event.inputs.rocm_nightly_version }}"
           $channel = "v2-staging"
           $archDir = "gfx103X-dgpu"
@@ -79,20 +65,17 @@ jobs:
       - name: Prepare TheRock external_build/pytorch helper
         shell: powershell
         run: |
-          . C:\pytorch_venv\Scripts\Activate.ps1
           cd C:\
           git clone https://github.com/ROCm/TheRock.git
           cd C:\TheRock
           git checkout -q --detach e060adb724b23da94b6913296f828fb56c28e196
 
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
           python .\build_tools\fetch_sources.py
 
       - name: Checkout PyTorch / Audio / Vision (ROCm fork)
         shell: powershell
         run: |
-          . C:\pytorch_venv\Scripts\Activate.ps1
           cd C:\TheRock\external_build\pytorch
 
           $TorchRoot = "C:\pytorch"
@@ -111,7 +94,6 @@ jobs:
       - name: Build PyTorch ROCm wheels
         shell: powershell
         run: |
-          . C:\pytorch_venv\Scripts\Activate.ps1
           cd C:\TheRock\external_build\pytorch
 
           $TorchRoot = "C:\pytorch"
@@ -130,7 +112,7 @@ jobs:
             --clean
 
       - name: Upload PyTorch ROCm wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pytorch-rocm-wheels-gfx103X-${{ github.event.inputs.rocm_nightly_version }}-${{ github.event.inputs.pytorch_version }}
           path: C:\pytorch_rocm_out
