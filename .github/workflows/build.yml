@@ -70,7 +70,7 @@ jobs:
           Download-File "$baseUrl/$develFile" $develFile
           Download-File "$baseUrl/$libsFile"  $libsFile
 
-          python -m pip install .\$metaFile
+          python -m pip install --no-deps .\$metaFile
           python -m pip install .\$coreFile
           python -m pip install .\$develFile
           python -m pip install .\$libsFile
