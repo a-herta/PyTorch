@@ -6,7 +6,7 @@ on:
       rocm_nightly_version:
         description: 'ROCm SDK nightly version'
         required: true
-        default: '7.11.0a20260120'
+        default: '7.11.0a20260121'
       pytorch_version:
         description: 'ROCm pytorch release version'
         required: true
@@ -56,22 +56,21 @@ jobs:
 
           function Download-File($url, $outFile) {
             Write-Host "Downloading: $url"
-            # -L 跟随跳转
-            # --fail 遇到 4xx/5xx 直接失败
-            # --retry-all-errors + --retry 自动重试
-            # -C - 断点续传
             curl.exe -L --fail --retry 10 --retry-delay 2 --retry-all-errors -C - `
               -o $outFile $url
           }
 
+          $metaFile   = "rocm-$version.tar.gz"
           $coreFile   = "rocm_sdk_core-$version-py3-none-win_amd64.whl"
           $develFile  = "rocm_sdk_devel-$version-py3-none-win_amd64.whl"
           $libsFile   = "rocm_sdk_libraries_gfx103x_dgpu-$version-py3-none-win_amd64.whl"
 
+          Download-File "$baseUrl/$metaFile"  $metaFile
           Download-File "$baseUrl/$coreFile"  $coreFile
           Download-File "$baseUrl/$develFile" $develFile
           Download-File "$baseUrl/$libsFile"  $libsFile
 
+          python -m pip install .\$metaFile
           python -m pip install .\$coreFile
           python -m pip install .\$develFile
           python -m pip install .\$libsFile
