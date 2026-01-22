@@ -6,7 +6,7 @@ on:
       rocm_nightly_version:
         description: 'ROCm SDK nightly version'
         required: true
-        default: '7.11.0a20260121'
+        default: '7.12.0a20260122'
       pytorch_version:
         description: 'ROCm pytorch release version'
         required: true
@@ -19,6 +19,10 @@ jobs:
 
     env:
       DVC_NO_ANALYTICS: "1"
+      BUILD_ROOT: D:\build
+      TEMP: D:\temp
+      TMP: D:\temp
+      PIP_CACHE_DIR: D:\pip-cache
 
     steps:
       - name: Checkout
@@ -34,6 +38,7 @@ jobs:
         run: |
           git config --global core.longpaths true
           git config --global core.symlinks true
+          Get-PSDrive -PSProvider FileSystem | Format-Table -AutoSize
 
       - name: Prepare Python environment
         shell: powershell
@@ -51,8 +56,8 @@ jobs:
           $archDir = "gfx103X-dgpu"
           $baseUrl = "https://rocm.nightlies.amd.com/$channel/$archDir"
 
-          New-Item -ItemType Directory -Path C:\rocm-sdk -Force | Out-Null
-          Set-Location C:\rocm-sdk
+          New-Item -ItemType Directory -Path "$env:BUILD_ROOT\rocm-sdk" -Force | Out-Null
+          Set-Location "$env:BUILD_ROOT\rocm-sdk"
 
           function Download-File($url, $outFile) {
             Write-Host "Downloading: $url"
@@ -80,9 +85,9 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          cd C:\
+          cd "$env:BUILD_ROOT"
           git clone https://github.com/ROCm/TheRock.git
-          cd C:\TheRock
+          cd "$env:BUILD_ROOT\TheRock"
 
           python -m pip install -r requirements.txt
           python .\build_tools\fetch_sources.py
@@ -92,9 +97,9 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          cd C:\TheRock\external-builds\pytorch
+          cd "$env:BUILD_ROOT\TheRock\external-builds\pytorch"
 
-          $TorchRoot = "C:\pytorch"
+          $TorchRoot = "$env:BUILD_ROOT\pytorch"
           New-Item -ItemType Directory -Path $TorchRoot -Force | Out-Null
           $TorchDir  = Join-Path $TorchRoot "pytorch"
           $AudioDir  = Join-Path $TorchRoot "audio"
@@ -112,14 +117,14 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          cd C:\TheRock\external-builds\pytorch
+          cd "$env:BUILD_ROOT\TheRock\external-builds\pytorch"
 
-          $TorchRoot = "C:\pytorch"
+          $TorchRoot = "$env:BUILD_ROOT\pytorch"
           $TorchDir  = Join-Path $TorchRoot "pytorch"
           $AudioDir  = Join-Path $TorchRoot "audio"
           $VisionDir = Join-Path $TorchRoot "vision"
 
-          $OutDir = "C:\pytorch_rocm_out"
+          $OutDir = "$env:BUILD_ROOT\pytorch_rocm_out"
           New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 
           python .\build_prod_wheels.py build `
@@ -133,4 +138,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytorch-rocm-wheels-gfx103X-${{ github.event.inputs.rocm_nightly_version }}-${{ github.event.inputs.pytorch_version }}
-          path: C:\pytorch_rocm_out
+          path: $env:BUILD_ROOT\pytorch_rocm_out
